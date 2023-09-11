@@ -1,0 +1,133 @@
+﻿@page "/api-scope"
+@using AuthServer.DTOs.ApiScopes
+
+@inject IJSRuntime JS
+@inject IApiScopeRepository _apiScopeRepository
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">List Api Scopes</h5>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>DisplayName</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var scope in scopes)
+                {
+                    <tr>
+                        <td>@scope.Name</td>
+                        <td>@scope.DisplayName</td>
+                        <td>
+                            <button 
+                                class="btn btn-sm btn-primary"
+                            >
+                                <i class="bi bi-pen-fill"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <button
+                                class="btn btn-sm btn-danger"
+                                @onclick="() => DeleteScope(scope.Name)"
+                            >
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Create Scope</h5>
+        <form @onsubmit="CreateScopeSubmit">
+            <div class="form-group">
+                <label for="apiScopeName">Name</label>
+                <input type="text" class="form-control" id="apiScopeName" placeholder="Name" @bind="apiScopeModel.Name">
+            </div>
+            <div class="form-group">
+                <label for="apiScopeDisplayName">Display Name</label>
+                <input type="text" class="form-control" id="apiScopeDisplayName" placeholder="Display Name" @bind="apiScopeModel.DisplayName">
+            </div>
+            <div class="form-group">
+                <label for="apiScopeUserClaims">User Claims</label>
+                <input type="text" class="form-control" id="apiScopeUserClaims" placeholder="Claims1 Claims2" @bind="apiScopeModel.UserClaims">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+</div>
+
+<!-- modal -->
+<button class="btn btn-secondary" @onclick='eventArgs => ShowModal("modalEdit")'>Show Modal</button>
+<div class="modal fade show" id="modalEdit" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Modal body text goes here.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary">Save changes</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IJSObjectReference module;
+    private IEnumerable<ApiScopeSummaryModel> scopes = new List<ApiScopeSummaryModel>();
+    private ApiScopeModel apiScopeModel = new ApiScopeModel();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Pages/Admin/ApiScopePage.razor.js");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        scopes = await _apiScopeRepository.GetAllAsync();
+    }
+
+    private async Task CreateScopeSubmit()
+    {
+        await _apiScopeRepository.CreateAsync(apiScopeModel);
+        scopes = await _apiScopeRepository.GetAllAsync();
+        apiScopeModel = new ApiScopeModel();
+    }
+
+    private async Task DeleteScope(string scopeId)
+    {
+        await _apiScopeRepository.DeleteAsync(scopeId);
+        scopes = await _apiScopeRepository.GetAllAsync();
+    }
+
+    protected async void ShowModal(string elementId)
+    {
+        if (module != null)
+        {
+            await module.InvokeAsync<string>("showModal", elementId);
+        }
+        else
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./Pages/Admin/ApiScopePage.razor.js");
+            await module.InvokeAsync<string>("showModal", elementId);
+        }
+    }
+}
